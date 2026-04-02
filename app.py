@@ -39,8 +39,8 @@ st.title("Asteroid Retrieval using Solar Electric Propulsion")
 
 # Initial Mission Defaults
 if 'dv_out' not in st.session_state:
-    st.session_state.dv_out = 1200.0
-    st.session_state.dv_ret = 1800.0
+    st.session_state.dv_out = 4500.0
+    st.session_state.dv_ret = 4500.0
     st.session_state.m_dry = 10000.0
     st.session_state.m_ast = 55000.0
     st.session_state.T = 4.8
