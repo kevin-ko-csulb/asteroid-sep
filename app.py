@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="SEP Asteroid Retrieval", layout="wide")
+st.set_page_config(page_title="SEP Asteroid Mass Calculator", layout="wide")
 
 st.markdown("""
 <style>
@@ -102,7 +102,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Asteroid Retrieval using Solar Electric Propulsion")
+st.title("Asteroid Retrieval Fuel Mass Calculator")
 
 # Initial Mission Defaults
 if 'dv_out' not in st.session_state:
