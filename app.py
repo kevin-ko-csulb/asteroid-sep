@@ -238,7 +238,7 @@ m_fuel_total = m_fuel_outbound + m_fuel_return
 # OUTPUTS
 st.subheader("Mission Results")
 
-m1, m2, m3, m4, m5 = st.columns(5)
+m1, m2, m3, m4, m5, m6 = st.columns(6)
 m1.metric("Outbound Fuel", f"{m_fuel_outbound:,.0f} kg", help=r"""**Outbound Fuel:**
 
 $$
@@ -259,6 +259,7 @@ if st.session_state.prop_mode_key in ["Solar Electric Propulsion (SEP)", "Custom
     if T > 0:
         t_out_days = (m_fuel_outbound * v_e / T) / 86400
         t_ret_days = (m_fuel_return * v_e / T) / 86400
+        mdot_mg_s = (T / v_e) * 1e6
         m4.metric("Outbound Burn", f"{t_out_days:,.1f} d", help=r"""**Exact Burn Time:**
 
 $$
@@ -268,6 +269,11 @@ $$""")
 
 $$
 t_{\mathrm{ret}} = \frac{m_{\mathrm{fuel,ret}} \cdot I_{\mathrm{sp}} \cdot g_0}{T}
+$$""")
+        m6.metric("Mass Flow", f"{mdot_mg_s:,.1f} mg/s", help=r"""**Mass Flow Rate:**
+
+$$
+\dot{m} = \frac{T}{I_{\mathrm{sp}} \cdot g_0}
 $$""")
     else:
         m4.metric("Outbound Burn", "Infinite", help=r"""**Burn Time:**
@@ -280,9 +286,15 @@ $$""")
 $$
 t_{\mathrm{ret}} = \infty \quad \text{(Zero Thrust)}
 $$""")
+        m6.metric("Mass Flow", "0.0 mg/s", help=r"""**Mass Flow Rate:**
+
+$$
+\dot{m} = 0 \quad \text{(Zero Thrust)}
+$$""")
 else:
     m4.metric("Outbound Burn", "Instant", help="Instantaneous orbit maneuver via high-thrust propulsion")
     m5.metric("Return Burn", "Instant", help="Instantaneous orbit maneuver via high-thrust propulsion")
+    m6.metric("Mass Flow", "N/A", help="Not applicable for impulsive trajectory models")
 
 st.markdown("**Intermediate Masses:**")
 c1, c2, c3, c4 = st.columns(4)
