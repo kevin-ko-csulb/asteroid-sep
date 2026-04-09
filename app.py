@@ -106,8 +106,8 @@ st.title("Asteroid Retrieval Fuel Mass Calculator")
 
 # Initial Mission Defaults
 if 'dv_out' not in st.session_state:
-    st.session_state.dv_out = 4340.5
-    st.session_state.dv_ret = 4340.5
+    st.session_state.dv_out = 4133.81
+    st.session_state.dv_ret = 2435.42
     st.session_state.m_dry = 10000.0
     st.session_state.m_ast = 55000.0
     st.session_state.T = 4.8
