@@ -126,7 +126,7 @@ THRUSTERS_DATA = {
 if 'mission_target_key' not in st.session_state:
     st.session_state.mission_target_key = list(ASTEROIDS_DATA.keys())[0]
 
-initial_ast = ASTEROIDS_DATA[st.session_state.mission_target_key]
+initial_ast = ASTEROIDS_DATA.get(st.session_state.mission_target_key, list(ASTEROIDS_DATA.values())[0])
 if 'dv_out' not in st.session_state:
     st.session_state.dv_out = initial_ast["dv_out"]
     st.session_state.dv_ret = initial_ast["dv_ret"]
@@ -243,16 +243,13 @@ if app_mode == "🚀 Interactive Mass Calculator":
 
     is_sep = st.session_state.prop_mode_key == "Solar Electric Propulsion (SEP)"
 
-    if not is_sep:
-        st.sidebar.markdown('<style>div[data-testid="stSelectbox"] { visibility: hidden; pointer-events: none; }</style>', unsafe_allow_html=True)
-
-    st.sidebar.selectbox(
-        "SEP System:", 
-        list(THRUSTERS_DATA.keys()),
-        key="sep_mode_key",
-        disabled=not is_sep,
-        on_change=update_propulsion_from_preset
-    )
+    if is_sep:
+        st.sidebar.selectbox(
+            "SEP System:", 
+            list(THRUSTERS_DATA.keys()),
+            key="sep_mode_key",
+            on_change=update_propulsion_from_preset
+        )
 
     def set_custom_prop():
         st.session_state.prop_mode_key = "Custom (Manual)"
