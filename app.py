@@ -1,8 +1,8 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-
 import pandas as pd
+
 st.set_page_config(page_title="SEP Asteroid Mass Calculator", layout="wide")
 
 st.markdown("""
@@ -105,50 +105,38 @@ st.markdown("""
 
 st.title("Asteroid Retrieval Fuel Mass Calculator")
 
+app_mode = st.radio("Select View:", ["🚀 Interactive Mass Calculator", "📊 Comparison Matrix"], horizontal=True)
+st.markdown("---")
+
+# --- DATA DICTIONARIES ---
+ASTEROIDS_DATA = {
+    "2012 XB112": {"dv_out": 2631.9, "dv_ret": 3077.9, "m_ast": 55000.0},
+    "2006 RH120": {"dv_out": 1700.5, "dv_ret": 1236.9, "m_ast": 70282.9},
+    "2020 CD3": {"dv_out": 1588.2, "dv_ret": 1171.5, "m_ast": 5683.4},
+    "2013 RX53": {"dv_out": 1813.2, "dv_ret": 1181.5, "m_ast": 88802.4}
+}
+
+THRUSTERS_DATA = {
+    "X3 Hall Effect Thruster": {"Isp": 2400.0, "T": 4.8},
+    "Gridded Ion Thruster": {"Isp": 4500.0, "T": 2.5},
+    "AEPS (4.8N equiv: 12x Units)": {"Isp": 2600.0, "T": 4.8}
+}
+
 # Initial Mission Defaults
 if 'mission_target_key' not in st.session_state:
-    st.session_state.mission_target_key = "2012 XB112"
+    st.session_state.mission_target_key = list(ASTEROIDS_DATA.keys())[0]
+
+initial_ast = ASTEROIDS_DATA[st.session_state.mission_target_key]
 if 'dv_out' not in st.session_state:
-    st.session_state.dv_out = 2631.9
-    st.session_state.dv_ret = 3077.9
+    st.session_state.dv_out = initial_ast["dv_out"]
+    st.session_state.dv_ret = initial_ast["dv_ret"]
     st.session_state.m_dry = 5000.0
-    st.session_state.m_ast = 55000.0
-    st.session_state.T = 4.8
-    st.session_state.Isp = 2400.0
+    st.session_state.m_ast = initial_ast["m_ast"]
+    st.session_state.T = THRUSTERS_DATA["X3 Hall Effect Thruster"]["T"]
+    st.session_state.Isp = THRUSTERS_DATA["X3 Hall Effect Thruster"]["Isp"]
 
-st.sidebar.markdown("**Mission Parameters**")
 
-def update_mission_from_preset():
-    mode = st.session_state.mission_target_key
-    def set_mission(dv_o, dv_r, m_a):
-        st.session_state.dv_out = dv_o
-        st.session_state.dv_out_num = dv_o
-        st.session_state.dv_out_sld = dv_o
-        st.session_state.dv_ret = dv_r
-        st.session_state.dv_ret_num = dv_r
-        st.session_state.dv_ret_sld = dv_r
-        st.session_state.m_ast = m_a
-        st.session_state.m_ast_num = m_a
-        st.session_state.m_ast_sld = m_a
-
-    if mode == "2012 XB112":
-        set_mission(2631.9, 3077.9, 55000.0)
-    elif mode == "2006 RH120":
-        set_mission(1700.5, 1236.9, 70282.9)
-    elif mode == "2020 CD3":
-        set_mission(1588.2, 1171.5, 5683.4)
-    elif mode == "2013 RX53":
-        set_mission(1813.2, 1181.5, 88802.4)
-
-st.sidebar.selectbox(
-    "Target Asteroid:",
-    ["2012 XB112", "2006 RH120", "2020 CD3", "2013 RX53", "Custom (Manual)"],
-    key="mission_target_key",
-    on_change=update_mission_from_preset
-)
-
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
-
+# SLIDER HELPER
 def slider_with_input(label, min_value, max_value, key, step=1.0, on_change=None):
     num_key = f"{key}_num"
     sld_key = f"{key}_sld"
@@ -175,107 +163,135 @@ def slider_with_input(label, min_value, max_value, key, step=1.0, on_change=None
                       on_change=update_from_sld)
     return st.session_state[key]
 
-def set_custom_mission():
-    st.session_state.mission_target_key = "Custom (Manual)"
-
-dv_out = slider_with_input(r"$\Delta v_{out}$ (m/s)", 0.0, 6000.0, "dv_out", step=10.0, on_change=set_custom_mission)
-dv_ret = slider_with_input(r"$\Delta v_{ret}$ (m/s)", 0.0, 6000.0, "dv_ret", step=10.0, on_change=set_custom_mission)
+# GLOBAL SIDEBAR (Always visible)
+st.sidebar.markdown("**Global Parameters**")
 m_dry = slider_with_input(r"Dry Mass, $m_{dry}$ (kg)", 1000.0, 30000.0, "m_dry", step=100.0)
-m_ast = slider_with_input(r"Asteroid Mass, $m_{ast}$ (kg)", 0.0, 150000.0, "m_ast", step=100.0, on_change=set_custom_mission)
-
 st.sidebar.markdown("---")
-st.sidebar.markdown("**Propulsion System**")
 
-if 'prop_mode_key' not in st.session_state:
-    st.session_state.prop_mode_key = "Solar Electric Propulsion (SEP)"
-if 'sep_mode_key' not in st.session_state:
-    st.session_state.sep_mode_key = "X3 Hall Effect Thruster"
-
-def update_propulsion_from_preset():
-    mode = st.session_state.prop_mode_key
-    def set_isp_t(isp, t):
-        st.session_state.Isp = isp
-        st.session_state.Isp_num = isp
-        st.session_state.Isp_sld = isp
-        st.session_state.T = t
-        st.session_state.T_num = t
-        st.session_state.T_sld = t
-
-    if mode == "Chemical (Bi-prop)":
-        set_isp_t(316.0, 0.0)
-    elif mode == "Nuclear Thermal Propulsion (NTP)":
-        set_isp_t(900.0, 0.0)
-    elif mode == "Solar Electric Propulsion (SEP)":
-        sep = st.session_state.get("sep_mode_key", "X3 Hall Effect Thruster")
-        if sep == "X3 Hall Effect Thruster":
-            set_isp_t(2400.0, 4.8)
-        elif sep == "Gridded Ion Thruster":
-            set_isp_t(4500.0, 2.5)
-        elif sep == "AEPS (4.8N equiv: 12x Units)":
-            set_isp_t(2600.0, 4.8)
-
-st.sidebar.radio(
-    "Category:",
-    ["Solar Electric Propulsion (SEP)", "Chemical (Bi-prop)", "Nuclear Thermal Propulsion (NTP)", "Custom (Manual)"],
-    key="prop_mode_key",
-    on_change=update_propulsion_from_preset
-)
-
-is_sep = st.session_state.prop_mode_key == "Solar Electric Propulsion (SEP)"
-
-if not is_sep:
-    st.sidebar.markdown('<style>div[data-testid="stSelectbox"] { visibility: hidden; pointer-events: none; }</style>', unsafe_allow_html=True)
-
-st.sidebar.selectbox(
-    "SEP System:", 
-    ["X3 Hall Effect Thruster", "Gridded Ion Thruster", "AEPS (4.8N equiv: 12x Units)"],
-    key="sep_mode_key",
-    disabled=not is_sep,
-    on_change=update_propulsion_from_preset
-)
-
-def set_custom_prop():
-    st.session_state.prop_mode_key = "Custom (Manual)"
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Propulsion Parameters**")
-
-Isp = slider_with_input(r"$I_{sp}$ (s)", 100.0, 5000.0, "Isp", step=10.0, on_change=set_custom_prop)
-
-if st.session_state.prop_mode_key in ["Solar Electric Propulsion (SEP)", "Custom (Manual)"]:
-    T = slider_with_input(r"Thrust $T$ (N)", 0.0, 10.0, "T", step=0.1, on_change=set_custom_prop)
-else:
-    T = 0.0
-
-# Input validations
-if Isp <= 0:
-    st.error("Isp must be > 0.")
-    st.stop()
-if T < 0:
-    st.error("Thrust cannot be negative.")
-    st.stop()
-if m_dry < 0 or m_ast < 0:
-    st.error("Masses cannot be negative.")
-    st.stop()
-
-# PHYSICS / EQUATIONS
 g0 = 9.80665
-v_e = Isp * g0
 
-m_return = m_dry + m_ast
-m_after_capture = m_return * np.exp(dv_ret / v_e)
-m_fuel_return = m_after_capture - m_return
+if app_mode == "🚀 Interactive Mass Calculator":
+    
+    # --- SIDEBAR: INTERACTIVE ---
+    st.sidebar.markdown("**Mission Parameters**")
 
-m_pre_capture = m_after_capture - m_ast
-m0 = m_pre_capture * np.exp(dv_out / v_e)
+    def update_mission_from_preset():
+        mode = st.session_state.mission_target_key
+        def set_mission(dv_o, dv_r, m_a):
+            st.session_state.dv_out = dv_o
+            st.session_state.dv_out_num = dv_o
+            st.session_state.dv_out_sld = dv_o
+            st.session_state.dv_ret = dv_r
+            st.session_state.dv_ret_num = dv_r
+            st.session_state.dv_ret_sld = dv_r
+            st.session_state.m_ast = m_a
+            st.session_state.m_ast_num = m_a
+            st.session_state.m_ast_sld = m_a
 
-m_fuel_outbound = m0 - m_pre_capture
-m_fuel_total = m_fuel_outbound + m_fuel_return
+        if mode in ASTEROIDS_DATA:
+            d = ASTEROIDS_DATA[mode]
+            set_mission(d["dv_out"], d["dv_ret"], d["m_ast"])
 
-# OUTPUTS
-tab1, tab2 = st.tabs(["🚀 Mission Calculator", "📊 Grand Comparison Matrix"])
+    st.sidebar.selectbox(
+        "Target Asteroid:",
+        list(ASTEROIDS_DATA.keys()) + ["Custom (Manual)"],
+        key="mission_target_key",
+        on_change=update_mission_from_preset
+    )
+    st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-with tab1:
+    def set_custom_mission():
+        st.session_state.mission_target_key = "Custom (Manual)"
+
+    dv_out = slider_with_input(r"$\Delta v_{out}$ (m/s)", 0.0, 6000.0, "dv_out", step=10.0, on_change=set_custom_mission)
+    dv_ret = slider_with_input(r"$\Delta v_{ret}$ (m/s)", 0.0, 6000.0, "dv_ret", step=10.0, on_change=set_custom_mission)
+    m_ast = slider_with_input(r"Asteroid Mass, $m_{ast}$ (kg)", 0.0, 150000.0, "m_ast", step=100.0, on_change=set_custom_mission)
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**Propulsion System**")
+
+    if 'prop_mode_key' not in st.session_state:
+        st.session_state.prop_mode_key = "Solar Electric Propulsion (SEP)"
+    if 'sep_mode_key' not in st.session_state:
+        st.session_state.sep_mode_key = "X3 Hall Effect Thruster"
+
+    def update_propulsion_from_preset():
+        mode = st.session_state.prop_mode_key
+        def set_isp_t(isp, t):
+            st.session_state.Isp = isp
+            st.session_state.Isp_num = isp
+            st.session_state.Isp_sld = isp
+            st.session_state.T = t
+            st.session_state.T_num = t
+            st.session_state.T_sld = t
+
+        if mode == "Chemical (Bi-prop)":
+            set_isp_t(316.0, 0.0)
+        elif mode == "Nuclear Thermal Propulsion (NTP)":
+            set_isp_t(900.0, 0.0)
+        elif mode == "Solar Electric Propulsion (SEP)":
+            sep = st.session_state.get("sep_mode_key", "X3 Hall Effect Thruster")
+            if sep in THRUSTERS_DATA:
+                set_isp_t(THRUSTERS_DATA[sep]["Isp"], THRUSTERS_DATA[sep]["T"])
+
+    st.sidebar.radio(
+        "Category:",
+        ["Solar Electric Propulsion (SEP)", "Chemical (Bi-prop)", "Nuclear Thermal Propulsion (NTP)", "Custom (Manual)"],
+        key="prop_mode_key",
+        on_change=update_propulsion_from_preset
+    )
+
+    is_sep = st.session_state.prop_mode_key == "Solar Electric Propulsion (SEP)"
+
+    if not is_sep:
+        st.sidebar.markdown('<style>div[data-testid="stSelectbox"] { visibility: hidden; pointer-events: none; }</style>', unsafe_allow_html=True)
+
+    st.sidebar.selectbox(
+        "SEP System:", 
+        list(THRUSTERS_DATA.keys()),
+        key="sep_mode_key",
+        disabled=not is_sep,
+        on_change=update_propulsion_from_preset
+    )
+
+    def set_custom_prop():
+        st.session_state.prop_mode_key = "Custom (Manual)"
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**Propulsion Parameters**")
+
+    Isp = slider_with_input(r"$I_{sp}$ (s)", 100.0, 5000.0, "Isp", step=10.0, on_change=set_custom_prop)
+
+    if st.session_state.prop_mode_key in ["Solar Electric Propulsion (SEP)", "Custom (Manual)"]:
+        T = slider_with_input(r"Thrust $T$ (N)", 0.0, 10.0, "T", step=0.1, on_change=set_custom_prop)
+    else:
+        T = 0.0
+
+    # Input validations
+    if Isp <= 0:
+        st.error("Isp must be > 0.")
+        st.stop()
+    if T < 0:
+        st.error("Thrust cannot be negative.")
+        st.stop()
+    if m_dry < 0 or m_ast < 0:
+        st.error("Masses cannot be negative.")
+        st.stop()
+
+    # PHYSICS / EQUATIONS
+    v_e = Isp * g0
+
+    m_return = m_dry + m_ast
+    m_after_capture = m_return * np.exp(dv_ret / v_e)
+    m_fuel_return = m_after_capture - m_return
+
+    m_pre_capture = m_after_capture - m_ast
+    m0 = m_pre_capture * np.exp(dv_out / v_e)
+
+    m_fuel_outbound = m0 - m_pre_capture
+    m_fuel_total = m_fuel_outbound + m_fuel_return
+
+    # OUTPUTS
     st.subheader("Mission Results")
 
     m1, m2, m3, m4, m5, m6 = st.columns(6)
@@ -304,12 +320,16 @@ $$""")
 
 $$
 t_{\mathrm{out}} = \frac{m_{\mathrm{fuel,out}} \cdot I_{\mathrm{sp}} \cdot g_0}{T}
-$$""")
+$$
+
+*Note: Burn time does not equal total mission time (coasting phases are not included).*""")
             m5.metric("Return Burn", f"{t_ret_days:,.1f} d", help=r"""**Burn Time:**
 
 $$
 t_{\mathrm{ret}} = \frac{m_{\mathrm{fuel,ret}} \cdot I_{\mathrm{sp}} \cdot g_0}{T}
-$$""")
+$$
+
+*Note: This represents a theoretical maximum. Since the actual retrieved asteroid mass will likely be less than the max capacity, the true return burn time will be shorter.*""")
             m6.metric("Mass Flow", f"{mdot_mg_s:,.1f} mg/s", help=r"""**Mass Flow Rate:**
 
 $$
@@ -410,26 +430,30 @@ $$""")
 
         st.pyplot(fig2)
 
-with tab2:
+elif app_mode == "📊 Comparison Matrix":
     st.subheader("Comparison Matrix: Asteroids vs SEP Thrusters")
-    st.markdown("This table calculates the fuel and burn time required for every combination of predefined Asteroids and SEP thrusters using your current **Dry Mass**.")
+    st.markdown("""This table calculates the fuel and burn time required for every combination of predefined Asteroids and SEP thrusters using current **Dry Mass**.
     
-    asteroids_data = {
-        "2012 XB112": {"dv_out": 2631.9, "dv_ret": 3077.9, "m_ast": 55000.0},
-        "2006 RH120": {"dv_out": 1700.5, "dv_ret": 1236.9, "m_ast": 70282.9},
-        "2020 CD3": {"dv_out": 1588.2, "dv_ret": 1171.5, "m_ast": 5683.4},
-        "2013 RX53": {"dv_out": 1813.2, "dv_ret": 1181.5, "m_ast": 88802.4}
-    }
+*Note: **Burn Time** is not the total mission time, as it does not account for coasting phases or capture operations. Furthermore, the **Return Burn Time** represents a theoretical maximum based on the max asteroid mass capacity; since the actual retrieved mass will likely be less, the real return burn time will also be shorter.*""")
     
-    thrusters_data = {
-        "X3 Hall Effect Thruster": {"Isp": 2400.0, "T": 4.8},
-        "Gridded Ion Thruster": {"Isp": 4500.0, "T": 2.5},
-        "AEPS (4.8N equiv: 12x Units)": {"Isp": 2600.0, "T": 4.8}
-    }
-    
+    # Show Preset Tables
+    col_pre1, col_pre2 = st.columns(2)
+    with col_pre1:
+        st.markdown("**Asteroid Presets**")
+        df_ast = pd.DataFrame(ASTEROIDS_DATA).T
+        df_ast.index.name = "Asteroid"
+        st.dataframe(df_ast.style.format("{:,.1f}"), use_container_width=True)
+    with col_pre2:
+        st.markdown("**Propulsion Presets**")
+        df_thr = pd.DataFrame(THRUSTERS_DATA).T
+        df_thr.index.name = "Thruster"
+        st.dataframe(df_thr.style.format("{:,.1f}"), use_container_width=True)
+
+    st.markdown("---")
+
     matrix_rows = []
-    for ast_name, ast in asteroids_data.items():
-        for thr_name, thr in thrusters_data.items():
+    for ast_name, ast in ASTEROIDS_DATA.items():
+        for thr_name, thr in THRUSTERS_DATA.items():
             # Physics
             v_e_mat = thr["Isp"] * g0
             m_ret_mat = m_dry + ast["m_ast"]
@@ -442,31 +466,40 @@ with tab2:
             
             t_out_d = (m_fuel_out_mat * v_e_mat / thr["T"]) / 86400
             t_ret_d = (m_fuel_ret_mat * v_e_mat / thr["T"]) / 86400
-            t_tot_d = t_out_d + t_ret_d
             
             matrix_rows.append({
                 "Asteroid": ast_name,
                 "Thruster": thr_name,
-                "Asteroid Mass (kg)": f"{ast['m_ast']:,.1f}",
+                "Asteroid Mass (kg)": ast['m_ast'],
                 "Total Fuel (kg)": m_fuel_tot_mat,
-                "Total Burn Time (days)": t_tot_d,
+                "Outbound Burn Time (days)": t_out_d,
+                "Return Burn Time (days)": t_ret_d,
                 "Initial Mass m_0 (kg)": m0_mat
             })
             
     df = pd.DataFrame(matrix_rows)
     
-    # Format the dataframe
+    # Format the dataframe with increased height
     st.dataframe(
         df, 
         use_container_width=True, 
         hide_index=True,
+        height=600,
         column_config={
+            "Asteroid Mass (kg)": st.column_config.NumberColumn(
+                "Asteroid Mass (kg)",
+                format="%.1f"
+            ),
             "Total Fuel (kg)": st.column_config.NumberColumn(
                 "Total Fuel (kg)",
                 format="%.1f"
             ),
-            "Total Burn Time (days)": st.column_config.NumberColumn(
-                "Total Burn Time (days)",
+            "Outbound Burn Time (days)": st.column_config.NumberColumn(
+                "Outbound Burn (days)",
+                format="%.1f"
+            ),
+            "Return Burn Time (days)": st.column_config.NumberColumn(
+                "Return Burn (days)",
                 format="%.1f"
             ),
             "Initial Mass m_0 (kg)": st.column_config.NumberColumn(
