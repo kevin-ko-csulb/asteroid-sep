@@ -109,7 +109,7 @@ st.title("Asteroid Retrieval Fuel Mass Calculator")
 if 'mission_target_key' not in st.session_state:
     st.session_state.mission_target_key = "2012 XB112"
 if 'dv_out' not in st.session_state:
-    st.session_state.dv_out = 4631.9
+    st.session_state.dv_out = 2631.9
     st.session_state.dv_ret = 3077.9
     st.session_state.m_dry = 5000.0
     st.session_state.m_ast = 55000.0
@@ -415,10 +415,10 @@ with tab2:
     st.markdown("This table calculates the fuel and burn time required for every combination of predefined Asteroids and SEP thrusters using your current **Dry Mass**.")
     
     asteroids_data = {
-        "2012 XB112": {"dv_out": 4631.9, "dv_ret": 3077.9, "m_ast": 55000.0},
-        "2006 RH120": {"dv_out": 3700.5, "dv_ret": 1236.9, "m_ast": 70282.9},
-        "2020 CD3": {"dv_out": 3588.2, "dv_ret": 1171.5, "m_ast": 5683.4},
-        "2013 RX53": {"dv_out": 3813.2, "dv_ret": 1181.5, "m_ast": 88802.4}
+        "2012 XB112": {"dv_out": 2631.9, "dv_ret": 3077.9, "m_ast": 55000.0},
+        "2006 RH120": {"dv_out": 1700.5, "dv_ret": 1236.9, "m_ast": 70282.9},
+        "2020 CD3": {"dv_out": 1588.2, "dv_ret": 1171.5, "m_ast": 5683.4},
+        "2013 RX53": {"dv_out": 1813.2, "dv_ret": 1181.5, "m_ast": 88802.4}
     }
     
     thrusters_data = {
