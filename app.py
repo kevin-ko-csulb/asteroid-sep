@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
+import pandas as pd
 st.set_page_config(page_title="SEP Asteroid Mass Calculator", layout="wide")
 
 st.markdown("""
@@ -105,15 +106,48 @@ st.markdown("""
 st.title("Asteroid Retrieval Fuel Mass Calculator")
 
 # Initial Mission Defaults
+if 'mission_target_key' not in st.session_state:
+    st.session_state.mission_target_key = "2012 XB112"
 if 'dv_out' not in st.session_state:
-    st.session_state.dv_out = 4133.81
-    st.session_state.dv_ret = 2435.42
-    st.session_state.m_dry = 10000.0
+    st.session_state.dv_out = 4631.9
+    st.session_state.dv_ret = 3077.9
+    st.session_state.m_dry = 5000.0
     st.session_state.m_ast = 55000.0
     st.session_state.T = 4.8
     st.session_state.Isp = 2400.0
 
 st.sidebar.markdown("**Mission Parameters**")
+
+def update_mission_from_preset():
+    mode = st.session_state.mission_target_key
+    def set_mission(dv_o, dv_r, m_a):
+        st.session_state.dv_out = dv_o
+        st.session_state.dv_out_num = dv_o
+        st.session_state.dv_out_sld = dv_o
+        st.session_state.dv_ret = dv_r
+        st.session_state.dv_ret_num = dv_r
+        st.session_state.dv_ret_sld = dv_r
+        st.session_state.m_ast = m_a
+        st.session_state.m_ast_num = m_a
+        st.session_state.m_ast_sld = m_a
+
+    if mode == "2012 XB112":
+        set_mission(2631.9, 3077.9, 55000.0)
+    elif mode == "2006 RH120":
+        set_mission(1700.5, 1236.9, 70282.9)
+    elif mode == "2020 CD3":
+        set_mission(1588.2, 1171.5, 5683.4)
+    elif mode == "2013 RX53":
+        set_mission(1813.2, 1181.5, 88802.4)
+
+st.sidebar.selectbox(
+    "Target Asteroid:",
+    ["2012 XB112", "2006 RH120", "2020 CD3", "2013 RX53", "Custom (Manual)"],
+    key="mission_target_key",
+    on_change=update_mission_from_preset
+)
+
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 def slider_with_input(label, min_value, max_value, key, step=1.0, on_change=None):
     num_key = f"{key}_num"
@@ -141,10 +175,13 @@ def slider_with_input(label, min_value, max_value, key, step=1.0, on_change=None
                       on_change=update_from_sld)
     return st.session_state[key]
 
-dv_out = slider_with_input(r"$\Delta v_{out}$ (m/s)", 0.0, 6000.0, "dv_out", step=10.0)
-dv_ret = slider_with_input(r"$\Delta v_{ret}$ (m/s)", 0.0, 6000.0, "dv_ret", step=10.0)
+def set_custom_mission():
+    st.session_state.mission_target_key = "Custom (Manual)"
+
+dv_out = slider_with_input(r"$\Delta v_{out}$ (m/s)", 0.0, 6000.0, "dv_out", step=10.0, on_change=set_custom_mission)
+dv_ret = slider_with_input(r"$\Delta v_{ret}$ (m/s)", 0.0, 6000.0, "dv_ret", step=10.0, on_change=set_custom_mission)
 m_dry = slider_with_input(r"Dry Mass, $m_{dry}$ (kg)", 1000.0, 30000.0, "m_dry", step=100.0)
-m_ast = slider_with_input(r"Asteroid Mass, $m_{ast}$ (kg)", 0.0, 60000.0, "m_ast", step=100.0)
+m_ast = slider_with_input(r"Asteroid Mass, $m_{ast}$ (kg)", 0.0, 150000.0, "m_ast", step=100.0, on_change=set_custom_mission)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Propulsion System**")
@@ -174,8 +211,8 @@ def update_propulsion_from_preset():
             set_isp_t(2400.0, 4.8)
         elif sep == "Gridded Ion Thruster":
             set_isp_t(4500.0, 2.5)
-        elif sep == "AEPS":
-            set_isp_t(2700.0, 3.6)
+        elif sep == "AEPS (4.8N equiv: 12x Units)":
+            set_isp_t(2600.0, 4.8)
 
 st.sidebar.radio(
     "Category:",
@@ -191,7 +228,7 @@ if not is_sep:
 
 st.sidebar.selectbox(
     "SEP System:", 
-    ["X3 Hall Effect Thruster", "Gridded Ion Thruster", "AEPS"],
+    ["X3 Hall Effect Thruster", "Gridded Ion Thruster", "AEPS (4.8N equiv: 12x Units)"],
     key="sep_mode_key",
     disabled=not is_sep,
     on_change=update_propulsion_from_preset
@@ -236,136 +273,205 @@ m_fuel_outbound = m0 - m_pre_capture
 m_fuel_total = m_fuel_outbound + m_fuel_return
 
 # OUTPUTS
-st.subheader("Mission Results")
+tab1, tab2 = st.tabs(["🚀 Mission Calculator", "📊 Grand Comparison Matrix"])
 
-m1, m2, m3, m4, m5, m6 = st.columns(6)
-m1.metric("Outbound Fuel", f"{m_fuel_outbound:,.0f} kg", help=r"""**Outbound Fuel:**
+with tab1:
+    st.subheader("Mission Results")
+
+    m1, m2, m3, m4, m5, m6 = st.columns(6)
+    m1.metric("Outbound Fuel", f"{m_fuel_outbound:,.0f} kg", help=r"""**Outbound Fuel:**
 
 $$
 m_{\mathrm{fuel,out}} = m_0 - m_{\mathrm{pre}}
 $$""")
-m2.metric("Return Fuel", f"{m_fuel_return:,.0f} kg", help=r"""**Return Fuel:**
+    m2.metric("Return Fuel", f"{m_fuel_return:,.0f} kg", help=r"""**Return Fuel:**
 
 $$
 m_{\mathrm{fuel,ret}} = m_{\mathrm{after}} - m_{\mathrm{ret}}
 $$""")
-m3.metric("Total Fuel", f"{m_fuel_total:,.0f} kg", help=r"""**Total Fuel:**
+    m3.metric("Total Fuel", f"{m_fuel_total:,.0f} kg", help=r"""**Total Fuel:**
 
 $$
 m_{\mathrm{total}} = m_{\mathrm{fuel,out}} + m_{\mathrm{fuel,ret}}
 $$""")
 
-if st.session_state.prop_mode_key in ["Solar Electric Propulsion (SEP)", "Custom (Manual)"]:
-    if T > 0:
-        t_out_days = (m_fuel_outbound * v_e / T) / 86400
-        t_ret_days = (m_fuel_return * v_e / T) / 86400
-        mdot_mg_s = (T / v_e) * 1e6
-        m4.metric("Outbound Burn", f"{t_out_days:,.1f} d", help=r"""**Exact Burn Time:**
+    if st.session_state.prop_mode_key in ["Solar Electric Propulsion (SEP)", "Custom (Manual)"]:
+        if T > 0:
+            t_out_days = (m_fuel_outbound * v_e / T) / 86400
+            t_ret_days = (m_fuel_return * v_e / T) / 86400
+            mdot_mg_s = (T / v_e) * 1e6
+            m4.metric("Outbound Burn", f"{t_out_days:,.1f} d", help=r"""**Burn Time:**
 
 $$
 t_{\mathrm{out}} = \frac{m_{\mathrm{fuel,out}} \cdot I_{\mathrm{sp}} \cdot g_0}{T}
 $$""")
-        m5.metric("Return Burn", f"{t_ret_days:,.1f} d", help=r"""**Exact Burn Time:**
+            m5.metric("Return Burn", f"{t_ret_days:,.1f} d", help=r"""**Burn Time:**
 
 $$
 t_{\mathrm{ret}} = \frac{m_{\mathrm{fuel,ret}} \cdot I_{\mathrm{sp}} \cdot g_0}{T}
 $$""")
-        m6.metric("Mass Flow", f"{mdot_mg_s:,.1f} mg/s", help=r"""**Mass Flow Rate:**
+            m6.metric("Mass Flow", f"{mdot_mg_s:,.1f} mg/s", help=r"""**Mass Flow Rate:**
 
 $$
 \dot{m} = \frac{T}{I_{\mathrm{sp}} \cdot g_0}
 $$""")
-    else:
-        m4.metric("Outbound Burn", "Infinite", help=r"""**Burn Time:**
+        else:
+            m4.metric("Outbound Burn", "Infinite", help=r"""**Burn Time:**
 
 $$
 t_{\mathrm{out}} = \infty \quad \text{(Zero Thrust)}
 $$""")
-        m5.metric("Return Burn", "Infinite", help=r"""**Burn Time:**
+            m5.metric("Return Burn", "Infinite", help=r"""**Burn Time:**
 
 $$
 t_{\mathrm{ret}} = \infty \quad \text{(Zero Thrust)}
 $$""")
-        m6.metric("Mass Flow", "0.0 mg/s", help=r"""**Mass Flow Rate:**
+            m6.metric("Mass Flow", "0.0 mg/s", help=r"""**Mass Flow Rate:**
 
 $$
 \dot{m} = 0 \quad \text{(Zero Thrust)}
 $$""")
-else:
-    m4.metric("Outbound Burn", "Instant", help="Instantaneous orbit maneuver via high-thrust propulsion")
-    m5.metric("Return Burn", "Instant", help="Instantaneous orbit maneuver via high-thrust propulsion")
-    m6.metric("Mass Flow", "N/A", help="Not applicable for impulsive trajectory models")
+    else:
+        m4.metric("Outbound Burn", "Instant", help="Instantaneous orbit maneuver via high-thrust propulsion")
+        m5.metric("Return Burn", "Instant", help="Instantaneous orbit maneuver via high-thrust propulsion")
+        m6.metric("Mass Flow", "N/A", help="Not applicable for impulsive trajectory models")
 
-st.markdown("**Intermediate Masses:**")
-c1, c2, c3, c4 = st.columns(4)
-c1.metric(r"Start Outbound ($m_0$)", f"{m0:,.0f} kg", help=r"""**Tsiolkovsky Rocket Eq:**
+    st.markdown("**Intermediate Masses:**")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric(r"Start Outbound ($m_0$)", f"{m0:,.0f} kg", help=r"""**Tsiolkovsky Rocket Eq:**
 
 $$
 m_0 = m_{\mathrm{pre}} \cdot \exp\left(\frac{\Delta v_{\mathrm{out}}}{I_{\mathrm{sp}} \cdot g_0}\right)
 $$""")
-c2.metric(r"Pre-Capture ($m_{\mathrm{pre}}$)", f"{m_pre_capture:,.0f} kg", help=r"""**Before Capture:**
+    c2.metric(r"Pre-Capture ($m_{\mathrm{pre}}$)", f"{m_pre_capture:,.0f} kg", help=r"""**Before Capture:**
 
 $$
 m_{\mathrm{pre}} = m_{\mathrm{after}} - m_{\mathrm{ast}}
 $$""")
-c3.metric(r"After Capture ($m_{\mathrm{after}}$)", f"{m_after_capture:,.0f} kg", help=r"""**Tsiolkovsky Rocket Eq:**
+    c3.metric(r"After Capture ($m_{\mathrm{after}}$)", f"{m_after_capture:,.0f} kg", help=r"""**Tsiolkovsky Rocket Eq:**
 
 $$
 m_{\mathrm{after}} = m_{\mathrm{ret}} \cdot \exp\left(\frac{\Delta v_{\mathrm{ret}}}{I_{\mathrm{sp}} \cdot g_0}\right)
 $$""")
-c4.metric(r"End Return ($m_{\mathrm{ret}}$)", f"{m_return:,.0f} kg", help=r"""**Final Target Mass:**
+    c4.metric(r"End Return ($m_{\mathrm{ret}}$)", f"{m_return:,.0f} kg", help=r"""**Final Target Mass:**
 
 $$
 m_{\mathrm{ret}} = m_{\mathrm{dry}} + m_{\mathrm{ast}}
 $$""")
 
-st.markdown("---")
+    st.markdown("---")
 
-col_plot1, col_plot2 = st.columns([2, 1])
+    col_plot1, col_plot2 = st.columns([2, 1])
 
-with col_plot1:
-    st.markdown("**Mass breakdown at key mission points**")
-    fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 3.5), sharey=True)
+    with col_plot1:
+        st.markdown("**Mass breakdown at key mission points**")
+        fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 3.5), sharey=True)
 
-    # Outbound Leg
-    labels_out = ["Start Outbound", "Pre-capture"]
-    dry_out = np.array([m_dry, m_dry])
-    ret_fuel_out = np.array([m_fuel_return, m_fuel_return])
-    out_fuel_out = np.array([m_fuel_outbound, 0.0])
+        # Outbound Leg
+        labels_out = ["Start Outbound", "Pre-capture"]
+        dry_out = np.array([m_dry, m_dry])
+        ret_fuel_out = np.array([m_fuel_return, m_fuel_return])
+        out_fuel_out = np.array([m_fuel_outbound, 0.0])
 
-    ax1.bar(labels_out, dry_out, label="Dry Mass", color="#7f7f7f")
-    ax1.bar(labels_out, ret_fuel_out, bottom=dry_out, label="Return Fuel", color="#ff7f0e")
-    ax1.bar(labels_out, out_fuel_out, bottom=dry_out+ret_fuel_out, label="Outbound Fuel", color="#1f77b4")
-    ax1.set_ylabel("Mass (kg)")
-    ax1.set_title("Outbound Leg")
-    ax1.legend(fontsize=8)
+        ax1.bar(labels_out, dry_out, label="Dry Mass", color="#7f7f7f")
+        ax1.bar(labels_out, ret_fuel_out, bottom=dry_out, label="Return Fuel", color="#ff7f0e")
+        ax1.bar(labels_out, out_fuel_out, bottom=dry_out+ret_fuel_out, label="Outbound Fuel", color="#1f77b4")
+        ax1.set_ylabel("Mass (kg)")
+        ax1.set_title("Outbound Leg")
+        ax1.legend(fontsize=8)
 
-    # Return Leg
-    labels_ret = ["After Capture", "End Return"]
-    dry_ret = np.array([m_dry, m_dry])
-    ret_fuel_ret = np.array([m_fuel_return, 0.0])
-    ast_ret = np.array([m_ast, m_ast])
+        # Return Leg
+        labels_ret = ["After Capture", "End Return"]
+        dry_ret = np.array([m_dry, m_dry])
+        ret_fuel_ret = np.array([m_fuel_return, 0.0])
+        ast_ret = np.array([m_ast, m_ast])
 
-    ax2.bar(labels_ret, dry_ret, label="Dry Mass", color="#7f7f7f")
-    ax2.bar(labels_ret, ret_fuel_ret, bottom=dry_ret, label="Return Fuel", color="#ff7f0e")
-    ax2.bar(labels_ret, ast_ret, bottom=dry_ret+ret_fuel_ret, label="Asteroid Mass", color="#8c564b")
-    ax2.set_title("Return Leg")
-    ax2.legend(fontsize=8)
-    plt.tight_layout()
+        ax2.bar(labels_ret, dry_ret, label="Dry Mass", color="#7f7f7f")
+        ax2.bar(labels_ret, ret_fuel_ret, bottom=dry_ret, label="Return Fuel", color="#ff7f0e")
+        ax2.bar(labels_ret, ast_ret, bottom=dry_ret+ret_fuel_ret, label="Asteroid Mass", color="#8c564b")
+        ax2.set_title("Return Leg")
+        ax2.legend(fontsize=8)
+        plt.tight_layout()
 
-    st.pyplot(fig1)
+        st.pyplot(fig1)
 
-with col_plot2:
-    st.markdown("**Fuel totals**")
-    fig2, ax_fuel = plt.subplots(figsize=(4, 3.5))
-    fuel_labels = ["Outbound", "Return", "Total"]
-    fuel_vals = [m_fuel_outbound, m_fuel_return, m_fuel_total]
-    ax_fuel.bar(fuel_labels, fuel_vals, color=["#1f77b4", "#ff7f0e", "#2ca02c"])
-    ax_fuel.set_ylabel("Fuel Mass (kg)")
-    ax_fuel.set_title("Fuel Totals")
-    for i, v in enumerate(fuel_vals):
-        ax_fuel.text(i, v + m_fuel_total*0.02, f"{v:,.0f}", ha='center', va='bottom', fontsize=9)
-    ax_fuel.set_ylim(0, max(fuel_vals)*1.2)
-    fig2.tight_layout()
+    with col_plot2:
+        st.markdown("**Fuel totals**")
+        fig2, ax_fuel = plt.subplots(figsize=(4, 3.5))
+        fuel_labels = ["Outbound", "Return", "Total"]
+        fuel_vals = [m_fuel_outbound, m_fuel_return, m_fuel_total]
+        ax_fuel.bar(fuel_labels, fuel_vals, color=["#1f77b4", "#ff7f0e", "#2ca02c"])
+        ax_fuel.set_ylabel("Fuel Mass (kg)")
+        ax_fuel.set_title("Fuel Totals")
+        for i, v in enumerate(fuel_vals):
+            ax_fuel.text(i, v + m_fuel_total*0.02, f"{v:,.0f}", ha='center', va='bottom', fontsize=9)
+        ax_fuel.set_ylim(0, max(fuel_vals)*1.2)
+        fig2.tight_layout()
 
-    st.pyplot(fig2)
+        st.pyplot(fig2)
+
+with tab2:
+    st.subheader("Comparison Matrix: Asteroids vs SEP Thrusters")
+    st.markdown("This table calculates the fuel and burn time required for every combination of predefined Asteroids and SEP thrusters using your current **Dry Mass**.")
+    
+    asteroids_data = {
+        "2012 XB112": {"dv_out": 4631.9, "dv_ret": 3077.9, "m_ast": 55000.0},
+        "2006 RH120": {"dv_out": 3700.5, "dv_ret": 1236.9, "m_ast": 70282.9},
+        "2020 CD3": {"dv_out": 3588.2, "dv_ret": 1171.5, "m_ast": 5683.4},
+        "2013 RX53": {"dv_out": 3813.2, "dv_ret": 1181.5, "m_ast": 88802.4}
+    }
+    
+    thrusters_data = {
+        "X3 Hall Effect Thruster": {"Isp": 2400.0, "T": 4.8},
+        "Gridded Ion Thruster": {"Isp": 4500.0, "T": 2.5},
+        "AEPS (4.8N equiv: 12x Units)": {"Isp": 2600.0, "T": 4.8}
+    }
+    
+    matrix_rows = []
+    for ast_name, ast in asteroids_data.items():
+        for thr_name, thr in thrusters_data.items():
+            # Physics
+            v_e_mat = thr["Isp"] * g0
+            m_ret_mat = m_dry + ast["m_ast"]
+            m_after_mat = m_ret_mat * np.exp(ast["dv_ret"] / v_e_mat)
+            m_fuel_ret_mat = m_after_mat - m_ret_mat
+            m_pre_mat = m_after_mat - ast["m_ast"]
+            m0_mat = m_pre_mat * np.exp(ast["dv_out"] / v_e_mat)
+            m_fuel_out_mat = m0_mat - m_pre_mat
+            m_fuel_tot_mat = m_fuel_out_mat + m_fuel_ret_mat
+            
+            t_out_d = (m_fuel_out_mat * v_e_mat / thr["T"]) / 86400
+            t_ret_d = (m_fuel_ret_mat * v_e_mat / thr["T"]) / 86400
+            t_tot_d = t_out_d + t_ret_d
+            
+            matrix_rows.append({
+                "Asteroid": ast_name,
+                "Thruster": thr_name,
+                "Asteroid Mass (kg)": f"{ast['m_ast']:,.1f}",
+                "Total Fuel (kg)": m_fuel_tot_mat,
+                "Total Burn Time (days)": t_tot_d,
+                "Initial Mass m_0 (kg)": m0_mat
+            })
+            
+    df = pd.DataFrame(matrix_rows)
+    
+    # Format the dataframe
+    st.dataframe(
+        df, 
+        use_container_width=True, 
+        hide_index=True,
+        column_config={
+            "Total Fuel (kg)": st.column_config.NumberColumn(
+                "Total Fuel (kg)",
+                format="%.1f"
+            ),
+            "Total Burn Time (days)": st.column_config.NumberColumn(
+                "Total Burn Time (days)",
+                format="%.1f"
+            ),
+            "Initial Mass m_0 (kg)": st.column_config.NumberColumn(
+                "Initial Mass m_0 (kg)",
+                format="%.1f"
+            )
+        }
+    )
