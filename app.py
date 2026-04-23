@@ -427,6 +427,61 @@ $$""")
 
         st.pyplot(fig2)
 
+    # --- PROPULSION COMPARISON PLOT ---
+    if st.session_state.mission_target_key != "Custom (Manual)":
+        st.markdown("---")
+        st.markdown(f"**Total Fuel Required for '{st.session_state.mission_target_key}' by Propulsion Type**")
+        
+        prop_labels = []
+        prop_fuels = []
+        prop_colors = []
+        
+        def calc_fuel_for_isp(isp):
+            v_e_test = isp * g0
+            m_ret_test = m_dry + m_ast
+            m_after_test = m_ret_test * np.exp(dv_ret / v_e_test)
+            m_fuel_ret_test = m_after_test - m_ret_test
+            m_pre_test = m_after_test - m_ast
+            m0_test = m_pre_test * np.exp(dv_out / v_e_test)
+            m_fuel_out_test = m0_test - m_pre_test
+            return m_fuel_out_test + m_fuel_ret_test
+            
+        # Chemical & NTP
+        prop_labels.append("Chemical\n(316s)")
+        prop_fuels.append(calc_fuel_for_isp(316.0))
+        prop_colors.append("#d62728")
+        
+        prop_labels.append("NTP\n(900s)")
+        prop_fuels.append(calc_fuel_for_isp(900.0))
+        prop_colors.append("#9467bd")
+        
+        # SEP Presets
+        for thr_name, thr_data in THRUSTERS_DATA.items():
+            name_short = thr_name.replace(" Thruster", "").replace(" (4.8N equiv: 12x Units)", "")
+            prop_labels.append(f"{name_short}\n({thr_data['Isp']}s)")
+            prop_fuels.append(calc_fuel_for_isp(thr_data['Isp']))
+            prop_colors.append("#1f77b4")
+            
+        # Custom
+        if st.session_state.prop_mode_key == "Custom (Manual)":
+            prop_labels.append(f"Custom\n({Isp}s)")
+            prop_fuels.append(calc_fuel_for_isp(Isp))
+            prop_colors.append("#2ca02c")
+            
+        fig3, ax_comp = plt.subplots(figsize=(10, 4))
+        bars = ax_comp.bar(prop_labels, prop_fuels, color=prop_colors)
+        ax_comp.set_ylabel("Total Fuel Mass (kg)\n[Log Scale]")
+        ax_comp.set_yscale('log')
+        
+        # Add value labels
+        for bar in bars:
+            yval = bar.get_height()
+            ax_comp.text(bar.get_x() + bar.get_width()/2, yval * 1.15, f"{yval:,.0f}", ha='center', va='bottom', fontsize=9)
+            
+        ax_comp.set_ylim(bottom=min(prop_fuels)*0.5, top=max(prop_fuels)*5)
+        fig3.tight_layout()
+        st.pyplot(fig3)
+
 elif app_mode == "📊 Comparison Matrix":
     st.subheader("Comparison Matrix: Asteroids vs SEP Thrusters")
     st.markdown("""This table calculates the fuel and burn time required for every combination of predefined Asteroids and SEP thrusters using current **Dry Mass**.
