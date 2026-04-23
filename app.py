@@ -481,6 +481,8 @@ $$""")
         ax_comp.set_ylim(bottom=min(prop_fuels)*0.5, top=max(prop_fuels)*5)
         fig3.tight_layout()
         st.pyplot(fig3)
+        
+        st.caption("*Note: This chart applies the exact same $\\Delta v$ requirement across all propulsion types for a direct mathematical comparison. In orbital mechanics, high-thrust systems (Chemical/NTP) use impulsive trajectories that generally require a different $\\Delta v$ than the continuous low-thrust trajectories flown by SEP systems.*")
 
 elif app_mode == "📊 Comparison Matrix":
     st.subheader("Comparison Matrix: Asteroids vs SEP Thrusters")
