@@ -319,7 +319,7 @@ $$
 t_{\mathrm{out}} = \frac{m_{\mathrm{fuel,out}} \cdot I_{\mathrm{sp}} \cdot g_0}{T}
 $$
 
-*Note: Burn time does not equal total mission time (coasting phases are not included).*""")
+*Note: Burn time does not equal mission time (coasting phases are not included).*""")
             m5.metric("Return Burn", f"{t_ret_days:,.1f} d", help=r"""**Burn Time:**
 
 $$
@@ -490,6 +490,11 @@ elif app_mode == "📊 Comparison Matrix":
     
 *Note: **Burn Time** is not the total mission time, as it does not account for coasting phases or capture operations. Furthermore, the **Return Burn Time** represents a theoretical maximum based on the max asteroid mass capacity; since the actual retrieved mass will likely be less, the real return burn time will also be shorter.*""")
     
+    st.info("""**Important notes about candidate asteroids:**
+* **2020 CD3** and **2006 RH120** looked attractive in the fuel table, but later we found their JPL SBDB values came from **special minimoon / temporary Earth-capture periods**. Those are **event-specific** and may not represent a repeatable future mission.
+* **2013 RZ53** is **not** a minimoon case, but its SBDB page shows a **very short observation arc**, so the future orbit is less certain.
+* Because of that, **2012 XB112** remains the best **baseline target** for a more normal heliocentric retrieval mission.""")
+
     # Show Preset Tables
     col_pre1, col_pre2 = st.columns(2)
     with col_pre1:
@@ -505,8 +510,16 @@ elif app_mode == "📊 Comparison Matrix":
 
     st.markdown("---")
 
+    selected_asteroids = st.multiselect(
+        "Filter Asteroids for Comparison Table:",
+        options=list(ASTEROIDS_DATA.keys()),
+        default=list(ASTEROIDS_DATA.keys())
+    )
+
     matrix_rows = []
     for ast_name, ast in ASTEROIDS_DATA.items():
+        if ast_name not in selected_asteroids:
+            continue
         for thr_name, thr in THRUSTERS_DATA.items():
             # Physics
             v_e_mat = thr["Isp"] * g0
