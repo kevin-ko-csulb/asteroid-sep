@@ -110,7 +110,7 @@ st.markdown("---")
 
 # --- DATA DICTIONARIES ---
 ASTEROIDS_DATA = {
-    "2012 XB112": {"dv_out": 2631.9, "dv_ret": 3077.9, "m_ast": 55000.0},
+    "2012 XB112": {"dv_out": 1399.1, "dv_ret": 3077.9, "m_ast": 55000.0},
     "2006 RH120": {"dv_out": 1700.5, "dv_ret": 1236.9, "m_ast": 70282.9},
     "2020 CD3": {"dv_out": 1588.2, "dv_ret": 1171.5, "m_ast": 5683.4},
     "2013 RZ53": {"dv_out": 1813.2, "dv_ret": 1181.5, "m_ast": 88802.4}
