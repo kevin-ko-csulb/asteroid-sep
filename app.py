@@ -431,6 +431,7 @@ $$""")
     if st.session_state.mission_target_key != "Custom (Manual)":
         st.markdown("---")
         st.markdown(f"**Total Fuel Required for '{st.session_state.mission_target_key}' by Propulsion Type**")
+        st.caption(f"**Simulation Parameters:** $\\Delta v_{{out}}$ = {dv_out:,.1f} m/s &nbsp;|&nbsp; $\\Delta v_{{ret}}$ = {dv_ret:,.1f} m/s &nbsp;|&nbsp; $m_{{ast}}$ = {m_ast:,.0f} kg &nbsp;|&nbsp; $m_{{dry}}$ = {m_dry:,.0f} kg")
         
         prop_labels = []
         prop_fuels = []
@@ -489,12 +490,6 @@ elif app_mode == "📊 Comparison Matrix":
     st.markdown("""This table calculates the fuel and burn time required for every combination of predefined Asteroids and SEP thrusters using current **Dry Mass**.
     
 *Note: **Burn Time** is not the total mission time, as it does not account for coasting phases or capture operations. Furthermore, the **Return Burn Time** represents a theoretical maximum based on the max asteroid mass capacity; since the actual retrieved mass will likely be less, the real return burn time will also be shorter.*""")
-    
-    st.info("""**Important notes about candidate asteroids:**
-* **2020 CD3** and **2006 RH120** looked attractive in the fuel table, but later we found their JPL SBDB values came from **special minimoon / temporary Earth-capture periods**. Those are **event-specific** and may not represent a repeatable future mission.
-* **2013 RZ53** is **not** a minimoon case, but its SBDB page shows a **very short observation arc**, so the future orbit is less certain.
-* Because of that, **2012 XB112** remains the best **baseline target** for a more normal heliocentric retrieval mission.""")
-
     # Show Preset Tables
     col_pre1, col_pre2 = st.columns(2)
     with col_pre1:
@@ -502,11 +497,18 @@ elif app_mode == "📊 Comparison Matrix":
         df_ast = pd.DataFrame(ASTEROIDS_DATA).T
         df_ast.index.name = "Asteroid"
         st.dataframe(df_ast.style.format("{:,.1f}"), use_container_width=True)
+        st.info("""**Important notes about candidate asteroids:**
+* **2020 CD3** and **2006 RH120** looked attractive in the fuel table, but later we found their JPL SBDB values came from **special minimoon / temporary Earth-capture periods**. Those are **event-specific** and may not represent a repeatable future mission.
+* **2013 RZ53** is **not** a minimoon case, but its SBDB page shows a **very short observation arc**, so the future orbit is less certain.
+* Because of that, **2012 XB112** remains the best **baseline target** for a more normal heliocentric retrieval mission.""")
     with col_pre2:
         st.markdown("**Propulsion Presets**")
         df_thr = pd.DataFrame(THRUSTERS_DATA).T
         df_thr.index.name = "Thruster"
         st.dataframe(df_thr.style.format("{:,.1f}"), use_container_width=True)
+        st.info("""**Important notes about propulsion presets:**
+* **X3 Hall Effect Thruster:** The **4.8 N** value is a nominal thrust used for these calculations. The actual maximum thrust from its spec is **5.4 N**.
+* **AEPS:** To match the equivalent **4.8 N** thrust shown here, it would require an array of roughly **11–12** AEPS thrusters.""")
 
     st.markdown("---")
 
